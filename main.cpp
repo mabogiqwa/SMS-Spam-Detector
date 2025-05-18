@@ -4,6 +4,8 @@
 #include <string>
 #include <cctype>
 #include <sstream>
+#include <unordered_map>
+#include <set>
 
 std::vector<std::pair<std::string, std::string>> get_data();
 //Postcondition: Retrieves/Parses message data from .csv file
@@ -21,6 +23,19 @@ std::string normalize(const std::string& input)
     return result;
 }
 
+std::vector<std::string> tokenize(const std::string &text)
+{
+    std::stringstream ss(text);
+    std::string word;
+    std::vector<std::string> tokens;
+
+    while (ss >> word) {
+        tokens.push_back(word);
+    }
+
+    return tokens;
+}
+
 void print_data(std::vector<std::pair<std::string, std::string>>);
 //Postcondition: Prints message data
 
@@ -28,11 +43,12 @@ int main()
 {
     std::vector<std::pair<std::string, std::string>> data = get_data();
 
-    //print_data(data);
+    std::vector<std::vector<std::string>> tokenizedData;
 
     for (const auto& sms : data) {
-        std::string message = sms.second;
-        std::cout << normalize(message) << std::endl;
+        std::string normalizedMessage = normalize(sms.second);
+        std::vector<std::string> tokens = tokenize(normalizedMessage);
+        tokenizedData.push_back(tokens);
     }
 
     return 0;
