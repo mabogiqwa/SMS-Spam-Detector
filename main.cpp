@@ -88,7 +88,7 @@ int main()
 
 std::vector<std::pair<std::string, std::string>> get_data()
 {
-    std::string fileDirectory = "data/synthetic_sms_dataset_with_social.csv";
+    std::string fileDirectory = "data/synthetic_sms_dataset.csv";
     //Going later use QFileDialog to retrieve file directories
     std::string line, label, message;
     std::vector<std::pair<std::string, std::string>> data;
