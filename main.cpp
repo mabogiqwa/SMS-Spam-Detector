@@ -36,6 +36,38 @@ std::vector<std::string> tokenize(const std::string &text)
     return tokens;
 }
 
+std::unordered_map<std::string, int> build_vocab(const std::vector<std::vector<std::string>>& tokenized_data, int start_index = 1) {
+    std::unordered_map<std::string, int> vocab;
+    int index = start_index;
+
+    for (const auto& tokens : tokenized_data) {
+        for (const auto& token : tokens) {
+            if (vocab.find(token) == vocab.end()) {
+                vocab[token] = index++;
+                if (index <= 10) { // Only print first few for sanity
+                    std::cout << "Token added: " << token << " => " << vocab[token] << std::endl;
+                }
+            }
+        }
+    }
+
+    std::cout << "Total vocabulary size: " << vocab.size() << std::endl;
+    return vocab;
+}
+
+std::vector<int> text_to_sequence(const std::vector<std::string> &tokens, const std::unordered_map<std::string, int> &vocab, int maxLen = 0)
+{
+    std::vector<int> seq;
+    for (const auto& token : tokens) {
+        seq.push_back(vocab.count(token) ? vocab.at(token) : 0);
+    }
+
+    if (seq.size() > maxLen) { seq.resize(maxLen); }
+    else { seq.insert(seq.end(), maxLen - seq.size(), 0); }
+
+    return seq;
+}
+
 void print_data(std::vector<std::pair<std::string, std::string>>);
 //Postcondition: Prints message data
 
