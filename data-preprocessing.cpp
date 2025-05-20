@@ -25,7 +25,18 @@ std::vector<int> text_to_sequence(const std::vector<std::string> &tokens, const 
 void print_data(std::vector<std::pair<std::string, std::string>>);
 //Postcondition: Prints message data
 
-void write_to_csv(const std::vector<std::pair<std::string, std::string>> data, std::vector<std::vector<int>> sequences)
+double compute_average_length(const std::vector<std::vector<std::string>>& tokenizedData)
+{
+    size_t length = 0;
+
+    for (const auto& sms: tokenizedData) {
+        length += sms.size();
+    }
+
+    return double(length) / tokenizedData.size();
+}
+
+void write_to_csv(const std::vector<std::pair<std::string, std::string>>& data, std::vector<std::vector<int>>& sequences)
 {
     std::ofstream outFile("data/preprocessed-data.txt");
 
@@ -80,7 +91,9 @@ int main()
         if (++count >= 50) { break; }
     }
     */
-    write_to_csv(data, sequences);
+    //write_to_csv(data, sequences);
+
+    std::cout << "Average message length: " << compute_average_length(tokenizedData);
 
     return 0;
 }
