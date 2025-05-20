@@ -25,6 +25,32 @@ std::vector<int> text_to_sequence(const std::vector<std::string> &tokens, const 
 void print_data(std::vector<std::pair<std::string, std::string>>);
 //Postcondition: Prints message data
 
+void write_to_csv(const std::vector<std::pair<std::string, std::string>> data, std::vector<std::vector<int>> sequences)
+{
+    std::ofstream outFile("data/preprocessed-data.txt");
+
+    if (outFile.fail()) {
+        std::cerr << "Error occurred opening file" << std::endl;
+        exit(1);
+    }
+
+    outFile << "Label,Sequence\n";
+
+    int count = 0;
+    for (const auto& sms : data) {
+        outFile << sms.first << ",";
+
+        for (size_t j = 0; j < sequences[count].size(); ++j) {
+            outFile << sequences[count][j];
+            if (j < sequences[count].size() - 1) { outFile << " ";}
+        }
+        outFile << "\n";
+        count++;
+    }
+
+    outFile.close();
+}
+
 int main()
 {
     std::vector<std::pair<std::string, std::string>> data = get_data();
@@ -45,18 +71,23 @@ int main()
         sequences.push_back(text_to_sequence(tokens, vocab));
     }
 
+    /*
     int count = 0;
-    for (const auto& sequence : sequences) {
-        std::cout << "Sequence " << count << ": ";
-        for (int id : sequence) {
-            std::cout << id << " ";
-        }
-        std::cout << "\n";
+    for (const auto& sms : data) {
+        std::string label = sms.first;
+        std::cout << label << std::endl;
 
-        if (++count >= 50) break;
+        if (++count >= 50) { break; }
     }
+    */
+    write_to_csv(data, sequences);
 
     return 0;
+}
+
+void write_to_csv(const std::vector<std::pair<std::string, std::string>> data, std::vector<int> sequences)
+{
+
 }
 
 std::string normalize(const std::string& input)
