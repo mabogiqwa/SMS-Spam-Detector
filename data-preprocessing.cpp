@@ -82,17 +82,6 @@ int main()
         sequences.push_back(text_to_sequence(tokens, vocab));
     }
 
-    /*
-    int count = 0;
-    for (const auto& sms : data) {
-        std::string label = sms.first;
-        std::cout << label << std::endl;
-
-        if (++count >= 50) { break; }
-    }
-    */
-    //write_to_csv(data, sequences);
-
     std::cout << "Average message length: " << compute_average_length(tokenizedData);
 
     return 0;
