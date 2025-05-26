@@ -1,4 +1,6 @@
 #include <iostream>
+#include <algorithm>
+#include <random>
 #include "data_utils.h"
 #include "rnn.h"
 
@@ -9,13 +11,13 @@ int main()
 
     // Improved hyperparameters
     int vocabSize, hiddenSize, numClasses;
-    int maxSeqLength = 50; // Fixed sequence length for better training
+    int maxSeqLength = 30; // Reduced for better processing
 
     std::vector<std::vector<std::string>> tokenizedData;
     std::unordered_map<std::string, int> vocab;
     std::vector<std::vector<int>> sequences;
 
-    // Add label encoding - map string labels to integers
+    // Label encoding
     std::unordered_map<std::string, int> labelToInt = {
         {"ham", 0},
         {"spam", 1},
@@ -23,7 +25,6 @@ int main()
         {"promotional", 3}
     };
 
-    // Reverse mapping for displaying results
     std::unordered_map<int, std::string> intToLabel = {
         {0, "ham"},
         {1, "spam"},
@@ -39,7 +40,6 @@ int main()
         std::vector<std::string> tokens = util1.tokenize(normalizedMessage);
         tokenizedData.push_back(tokens);
 
-        // Convert string label to integer
         if (labelToInt.find(sms.first) != labelToInt.end()) {
             labels.push_back(labelToInt[sms.first]);
         } else {
@@ -48,18 +48,18 @@ int main()
         }
     }
 
-    // Build vocabulary with reserved indices
-    vocab = util1.build_vocab(tokenizedData, 1); // Start from 1, reserve 0 for padding
-    vocab["<PAD>"] = 0; // Add padding token
-    vocab["<UNK>"] = vocab.size(); // Add unknown token
+    // Build vocabulary with better frequency filtering
+    vocab = util1.build_vocab(tokenizedData, 2); // Min frequency of 2
+    vocab["<PAD>"] = 0;
+    vocab["<UNK>"] = vocab.size();
 
-    // Convert to sequences with fixed length
+    // Convert to sequences
     for (const auto& tokens : tokenizedData) {
         sequences.push_back(util1.text_to_sequence(tokens, vocab, maxSeqLength));
     }
 
-    vocabSize = vocab.size() + 1; // +1 for unknown tokens
-    hiddenSize = 128; // Increased hidden size
+    vocabSize = vocab.size() + 10; // Extra buffer for unknown tokens
+    hiddenSize = 64; // Reduced to prevent overfitting
     numClasses = 4;
 
     std::cout << "Dataset Statistics:" << std::endl;
@@ -67,24 +67,53 @@ int main()
     std::cout << "Vocabulary size: " << vocabSize << std::endl;
     std::cout << "Hidden size: " << hiddenSize << std::endl;
     std::cout << "Max sequence length: " << maxSeqLength << std::endl;
-    std::cout << "Average message length: " << util1.compute_average_length(tokenizedData) << " words" << std::endl;
 
-    // Initialize improved model
-    RNN model(vocabSize, hiddenSize, numClasses);
+    // Check class distribution
+    std::vector<int> classCount(numClasses, 0);
+    for (int label : labels) {
+        if (label >= 0 && label < numClasses) {
+            classCount[label]++;
+        }
+    }
 
-    // Split data into train/test (80/20 split)
+    std::cout << "\nClass distribution:" << std::endl;
+    for (int i = 0; i < numClasses; ++i) {
+        std::cout << intToLabel[i] << ": " << classCount[i] << " samples" << std::endl;
+    }
+
+    // Shuffle data before splitting
+    std::vector<size_t> indices(sequences.size());
+    std::iota(indices.begin(), indices.end(), 0);
+
+    std::random_device rd;
+    std::default_random_engine gen(rd());
+    std::shuffle(indices.begin(), indices.end(), gen);
+
+    // Create balanced train/test split
     size_t trainSize = static_cast<size_t>(0.8 * sequences.size());
-    std::vector<std::vector<int>> trainSeq(sequences.begin(), sequences.begin() + trainSize);
-    std::vector<int> trainLabels(labels.begin(), labels.begin() + trainSize);
-    std::vector<std::vector<int>> testSeq(sequences.begin() + trainSize, sequences.end());
-    std::vector<int> testLabels(labels.begin() + trainSize, labels.end());
+
+    std::vector<std::vector<int>> trainSeq, testSeq;
+    std::vector<int> trainLabels, testLabels;
+
+    for (size_t i = 0; i < trainSize; ++i) {
+        trainSeq.push_back(sequences[indices[i]]);
+        trainLabels.push_back(labels[indices[i]]);
+    }
+
+    for (size_t i = trainSize; i < indices.size(); ++i) {
+        testSeq.push_back(sequences[indices[i]]);
+        testLabels.push_back(labels[indices[i]]);
+    }
 
     std::cout << "\nTraining set size: " << trainSize << std::endl;
     std::cout << "Test set size: " << (sequences.size() - trainSize) << std::endl;
 
-    // Train the model
+    // Initialize model
+    RNN model(vocabSize, hiddenSize, numClasses);
+
+    // Train with better hyperparameters
     std::cout << "\nStarting training..." << std::endl;
-    model.train(trainSeq, trainLabels, 0.001, 50); // Lower learning rate, more epochs
+    model.train(trainSeq, trainLabels, 0.01, 20); // Higher learning rate, more epochs
 
     // Evaluate on test set
     int correctPredictions = 0;
@@ -111,7 +140,7 @@ int main()
         confusionMatrix[actualLabel][predictedLabel]++;
     }
 
-    // Calculate and display error metrics
+    // Calculate and display metrics
     double accuracy = (double)correctPredictions / totalPredictions;
     double errorRate = 1.0 - accuracy;
 
@@ -140,6 +169,9 @@ int main()
 
     // Calculate per-class metrics
     std::cout << "\n=== Per-Class Metrics ===" << std::endl;
+    double totalF1 = 0.0;
+    int validClasses = 0;
+
     for (int i = 0; i < numClasses; ++i) {
         int truePositives = confusionMatrix[i][i];
         int falseNegatives = 0;
@@ -171,7 +203,19 @@ int main()
         std::cout << "  Recall: " << (recall * 100) << "%" << std::endl;
         std::cout << "  F1-Score: " << (f1Score * 100) << "%" << std::endl;
         std::cout << "  Support: " << actualClassTotal << " samples" << std::endl;
+
+        if (actualClassTotal > 0) {
+            totalF1 += f1Score;
+            validClasses++;
+        }
     }
+
+    if (validClasses > 0) {
+        double macroF1 = totalF1 / validClasses;
+        std::cout << "\nMacro-averaged F1-Score: " << (macroF1 * 100) << "%" << std::endl;
+    }
+
+    model.save_model_text("model-weights.txt");
 
     return 0;
 }

@@ -2,38 +2,45 @@
 #define RNN_H
 
 #include <vector>
-#include <cmath>
 #include <random>
-#include <iostream>
-#include <algorithm>
+
+// Forward declaration for internal state
+struct ForwardState;
 
 class RNN
 {
-public:
-    RNN(int inputSize, int hiddenSize, int outputSize);
-    std::vector<std::vector<double>> forward(const std::vector<std::vector<int>>& batchSeq);
-    int predict(const std::vector<std::vector<int>>& inputSeq);
-
-    // Add training method
-    void train(const std::vector<std::vector<int>>& sequences,
-               const std::vector<int>& labels,
-               double learningRate = 0.01,
-               int epochs = 100);
-
 private:
-    int inputSize;
-    int hiddenSize;
-    int outputSize;
+    int inputSize, hiddenSize, outputSize;
 
-    std::vector<std::vector<double>> inputToHiddenWeights; //Wxh
-    std::vector<std::vector<double>> hiddenToHiddenWeights; //Whh
-    std::vector<std::vector<double>> hiddenToOutputWeights; //Why
+    // Network weights
+    std::vector<std::vector<double>> inputToHiddenWeights;
+    std::vector<std::vector<double>> hiddenToHiddenWeights;
+    std::vector<std::vector<double>> hiddenToOutputWeights;
 
-    std::vector<double> hiddenBias; //bh
-    std::vector<double> outputBias; //by
+    // Biases
+    std::vector<double> hiddenBias;
+    std::vector<double> outputBias;
+
+    std::vector<std::vector<double>> m_inputToHidden, v_inputToHidden;
+    std::vector<std::vector<double>> m_hiddenToHidden, v_hiddenToHidden;
+    std::vector<std::vector<double>> m_hiddenToOutput, v_hiddenToOutput;
+    std::vector<double> m_hiddenBias, v_hiddenBias;
+    std::vector<double> m_outputBias, v_outputBias;
 
     std::vector<double> tanh(const std::vector<double>& x);
     std::vector<double> softmax(const std::vector<double>& x);
+    ForwardState forwardWithState(const std::vector<int>& sequence);
+
+public:
+    RNN(int inputS, int hiddenS, int outputS);
+
+    std::vector<std::vector<double>> forward(const std::vector<std::vector<int>>& batchSeq);
+    int predict(const std::vector<std::vector<int>>& inputSeq);
+    void train(const std::vector<std::vector<int>>& sequences,
+               const std::vector<int>& labels,
+               double learningRate,
+               int epochs);
+    void save_model_text(std::string filepath);
 };
 
-#endif // RNN_H
+#endif
